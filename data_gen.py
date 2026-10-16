@@ -63,6 +63,18 @@ class SyntheticGamingData:
         return len(self.online_casino) + len(self.sports_betting) + len(self.land_based)
 
 
+@dataclass(frozen=True)
+class OperationalDataset:
+    """Stable application boundary with labels kept in a dedicated table."""
+
+    profiles: pd.DataFrame
+    transactions: pd.DataFrame
+    scenario_labels: pd.DataFrame
+
+
+OPERATIONAL_DATA_SCHEMA_VERSION = 2
+
+
 def _money(value: float) -> float:
     return round(max(float(value), 0.0), 2)
 
@@ -468,11 +480,19 @@ def generate(
     weeks: int | None = None,
     seed: int = DEFAULT_DATA_CONFIG.seed,
     target_events: int | None = None,
-):
-    """Compatibility API returning profiles, normalized events, and held labels."""
+) -> OperationalDataset:
+    """Return the documented operational application data contract.
+
+    The named fields avoid fragile positional tuple unpacking. Scenario labels
+    remain physically separate from profiles and normalized transactions.
+    """
     history_days = weeks * 7 if weeks is not None else DEFAULT_DATA_CONFIG.history_days
     dataset = generate_dataset(n_players, history_days, target_events, seed)
-    return dataset.players, to_operational_events(dataset), dataset.scenario_labels
+    return OperationalDataset(
+        profiles=dataset.players,
+        transactions=to_operational_events(dataset),
+        scenario_labels=dataset.scenario_labels,
+    )
 
 
 def validate_dataset(dataset: SyntheticGamingData) -> dict[str, bool | int]:

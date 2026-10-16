@@ -5,7 +5,7 @@ import plotly.express as px
 import streamlit as st
 
 from configuration import RANDOM_SEED
-from data_gen import generate
+from data_gen import OPERATIONAL_DATA_SCHEMA_VERSION, OperationalDataset, generate
 from red_team import stress_test
 from scoring import explain, score
 from signals import compute
@@ -18,7 +18,10 @@ st.caption('Cross-channel investigation intelligence • FICTIONAL SYNTHETIC DAT
 
 
 @st.cache_data(show_spinner='Generating synthetic data...')
-def data(n, seed):
+def load_app_data(n: int, seed: int, schema_version: int) -> OperationalDataset:
+    """Load the versioned, named application contract through Streamlit's cache."""
+    if schema_version != OPERATIONAL_DATA_SCHEMA_VERSION:
+        raise ValueError('Unsupported operational data schema version')
     return generate(n_players=n, seed=seed)
 
 
@@ -36,7 +39,10 @@ with st.sidebar:
     threshold = st.slider('Review threshold', 0, 100, 35)
     st.info('Risk indices are heuristic rankings, NOT fraud probabilities. No real player data is used.')
 
-profiles, transactions, ground_truth = data(n, seed)
+app_data = load_app_data(n, seed, OPERATIONAL_DATA_SCHEMA_VERSION)
+profiles = app_data.profiles
+transactions = app_data.transactions
+ground_truth = app_data.scenario_labels
 scored = model(profiles, transactions, cross, hardened)
 queue = scored[scored.priority >= threshold]
 

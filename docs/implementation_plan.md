@@ -49,7 +49,18 @@ No schema is presented as an OLG internal schema. Scenario labels remain outside
 
 Exit criterion: repeatable experiments whose held-out results are generated from code, with no label access in operational transformations.
 
-## Phase 3 — investigator workflow
+## Phase 3 — cross-channel integration and identity resolution (completed)
+
+- Added a common event contract that preserves source channel, account, event, and transaction references.
+- Added confirmed, probable, unlinked, and conflicting identity states with synthetic confidence evidence.
+- Restricted canonical history merging to confirmed identities; uncertain records remain source-scoped.
+- Added channel coverage, missing fields, known unobserved periods, unlinked-record counts, and confidence reporting.
+- Added channel and unified summaries, cross-channel change indicators, and duplicate-representation controls.
+- Added a console comparison and focused tests for fragmented risk, incomplete land history, uncertain identity, single-channel activity, and identifier conflicts.
+
+The dashboard was not changed as part of this phase.
+
+## Future investigator workflow phase (not started)
 
 1. Add reason codes with source records and feature-window timestamps.
 2. Add queue filters for risk domain, data quality, and channel coverage.

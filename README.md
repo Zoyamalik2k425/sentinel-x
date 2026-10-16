@@ -24,6 +24,14 @@ Run the tests with:
 python -m pytest -q
 ```
 
+Run the Phase 3 console comparison with:
+
+```powershell
+python demo_cross_channel.py
+```
+
+The demonstration compares the largest individual-channel deposit view with the unified observed total. It does not launch or modify the dashboard.
+
 ## Generate the synthetic environment
 
 The default generation is deterministic and creates 2,000 fictional adult players, 100,000 events over 182 days, and scenario assignments for 9% of players:
@@ -34,7 +42,7 @@ python data_gen.py --players 2000 --events 100000 --days 182 --seed 42 --output 
 
 The command writes gzip-compressed CSV files for player profiles, online-casino events, sports-betting events, land-based events, and held scenario labels, plus `metadata.json` containing validation results. These are synthetic project schemas and are not representations of OLG internal databases.
 
-Programmatic callers can use `generate_dataset(...)`, `validate_dataset(...)`, and `save_dataset(...)`. The older `generate(...)` entry point remains as a compatibility adapter for the Streamlit application and does not merge scenario labels into operational events.
+Programmatic callers can use `generate_dataset(...)`, `validate_dataset(...)`, and `save_dataset(...)`. The `generate(...)` application adapter returns an `OperationalDataset` with named `profiles`, `transactions`, and `scenario_labels` fields. Labels are never merged into operational events.
 
 ## Architecture
 
@@ -42,6 +50,7 @@ Programmatic callers can use `generate_dataset(...)`, `validate_dataset(...)`, a
 |---|---|---|
 | Configuration | `configuration.py` | Fixed seeds, feature windows, model weights, and review cutoffs |
 | Synthetic data | `data_gen.py` | Fictional profiles, transactions, and a separate ground-truth table |
+| Cross-channel integration | `cross_channel.py` | Common events, conservative identity resolution, completeness, deduplication, and unified summaries |
 | Feature engineering | `signals.py` | Historical/recent, loss, geographic, channel, coverage, and network signals |
 | Models | `models.py` | Separate transparent AML/fraud and safer-gambling model outputs |
 | Risk scoring | `scoring.py` | Review indices, workload priority, evidence, and suggested human action |
@@ -56,6 +65,8 @@ Implemented:
 
 - Reproducible, three-channel fictional histories with explicit observation gaps.
 - Contextual signals comparing recent behavior with observed history.
+- Confirmed, probable, unlinked, and conflicting identity states; only confirmed matches receive canonical IDs.
+- Channel-specific and unified activity summaries that retain missingness and observation quality.
 - Separate AML/fraud and safer-gambling outputs; scores are indices, not probabilities.
 - A priority queue that uses the higher of the two review indices to support high recall.
 - Evidence and uncertainty statements, data-quality indicators, and human-only dispositions.
