@@ -1,0 +1,30 @@
+# Python virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Generated data
+data/*.csv
+data/*.parquet
+
+# Trained models
+*.joblib
+*.pkl
+
+# Environment variables
+.env
+.env.*
+
+# Editor files
+.vscode/
+
+# Operating system files
+.DS_Store
+Thumbs.db

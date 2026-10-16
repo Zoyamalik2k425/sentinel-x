@@ -1,0 +1,22 @@
+{
+  "description": "Fictional synthetic data; not an OLG internal schema.",
+  "seed": 42,
+  "start_time": "2026-01-01T00:00:00",
+  "end_time": "2026-07-01T23:59:59",
+  "counts": {
+    "players": 2000,
+    "online_casino_events": 46000,
+    "sports_betting_events": 34000,
+    "land_based_events": 20000,
+    "total_events": 100000,
+    "scenario_players": 180,
+    "unique_player_ids": true,
+    "unique_event_ids": true,
+    "timestamps_valid": true,
+    "events_after_account_open": true,
+    "balances_consistent": true,
+    "channel_assignments_valid": true,
+    "scenario_labels_separate": true,
+    "unlinked_land_events_present": true
+  }
+}
