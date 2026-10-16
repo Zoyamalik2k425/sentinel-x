@@ -15,7 +15,7 @@ class DataConfig:
     target_events: int = 100_000
     seed: int = RANDOM_SEED
     start_date: str = "2026-01-01"
-    risky_scenario_fraction: float = 0.09
+    risky_scenario_fraction: float = 0.03
 
 
 @dataclass(frozen=True)

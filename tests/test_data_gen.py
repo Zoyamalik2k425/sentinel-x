@@ -73,7 +73,8 @@ def test_scenario_labels_are_separate_and_include_hard_negatives():
     operational = (data.players, data.online_casino, data.sports_betting, data.land_based)
 
     assert tuple(data.scenario_labels.columns) == LABEL_COLUMNS
-    assert len(data.scenario_labels) == round(len(data.players) * .09)
+    malicious = data.scenario_labels[data.scenario_labels.ground_truth_label]
+    assert len(malicious) == round(len(data.players) * .03)
     assert (~data.scenario_labels.ground_truth_label).any()
     assert data.scenario_labels.player_id.isin(data.players.player_id).all()
     assert all(GROUND_TRUTH_COLUMNS.isdisjoint(frame.columns) for frame in operational)

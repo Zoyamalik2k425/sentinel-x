@@ -47,7 +47,9 @@ def compute(
     if hardened and len(recent):
         shared = recent.groupby('payment_token').player_id.nunique()
         suspicious_tokens = set(shared[shared>=2].index)
-        linked = recent[recent.payment_token.isin(suspicious_tokens)].player_id.unique()
+        linked = df.index.intersection(
+            recent[recent.payment_token.isin(suspicious_tokens)].player_id.unique()
+        )
         df.loc[linked,'network_signal'] = 1.
     # cross-channel fragmentation: score escalation in total combined behavior
     df['cross_signal'] = np.clip((df.change_ratio-1.25)/2.75,0,1) if cross_channel else 0.

@@ -22,7 +22,8 @@ COMMON_EVENT_COLUMNS = (
     'proposed_canonical_player_id', 'activity_entity_id', 'identity_status',
     'identity_confidence', 'deposit_amount', 'withdrawal_amount',
     'wager_amount', 'payout_amount', 'net_loss', 'amount', 'region',
-    'observed', 'transaction_reference',
+    'observed', 'transaction_reference', 'session_id', 'device_id',
+    'payment_instrument_id',
 )
 
 
@@ -192,6 +193,7 @@ def normalize_channel_events(
     sports['payout_amount_normalized'] = sports.settlement_amount
     sports['observed'] = True
     sports['transaction_reference'] = sports.get('transaction_reference', sports.event_id)
+    sports['session_id'] = None
 
     land = land_based.copy()
     land['source_account_id'] = _source_accounts(land)
@@ -203,6 +205,9 @@ def normalize_channel_events(
     land['wager_amount'] = land.wager_observed_amount
     land['payout_amount_normalized'] = land.payout_observed_amount
     land['region'] = land.property_region
+    land['session_id'] = None
+    land['device_id'] = None
+    land['payment_instrument_id'] = None
     land['observed'] = land.wager_observation_available.astype(bool)
     land['transaction_reference'] = land.get('transaction_reference', land.event_id)
     unobserved_financial = (~land.observed) & land.event_type.isin(

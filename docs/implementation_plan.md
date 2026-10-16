@@ -70,15 +70,100 @@ The dashboard was not changed as part of this phase.
 
 Exit criterion: an investigator can understand why a case was prioritized, inspect supporting and counter-evidence, and record a reversible local disposition.
 
-## Phase 4 — governance and demonstration readiness
+## Phase 4 — player behavioral feature engineering (completed)
 
-1. Create model cards and a synthetic-data datasheet.
-2. Add schema validation, structured logging without sensitive values, and dependency/security checks.
-3. Document failure modes, escalation boundaries, retention assumptions, and human-oversight requirements.
-4. Prepare a reproducible demo script that clearly distinguishes synthetic results from real-world claims.
+- Added channel-specific and unified event-time feature histories.
+- Added causal 7-day and 30-day activity, robust historical baselines, session changes, acceleration, and stability.
+- Added cross-channel participation, combined activity, coverage, device, payment-instrument, and identity-quality context.
+- Added behavioral peer comparisons without using age or region as model features.
+- Retained age and region in a separate fairness-audit table.
+- Added deliberate future-event leakage tests and explicit handling for incomplete history, unreliable losses, new players, and near-zero MAD.
 
-Exit criterion: another team member can reproduce the demo and explain its limits without implying knowledge of OLG's internal architecture.
+No dashboard or model-training changes were made in this phase.
+
+## Phase 5 — machine-learning anomaly detection (completed)
+
+- Added an Isolation Forest pipeline with median imputation, robust scaling, deterministic fitting, and empirical 0–100 anomaly severity.
+- Added causal rolling-median/MAD/CUSUM behavioral change detection.
+- Added KMeans behavioral cohorts and robust training-only peer distributions without age or region.
+- Added chronological train, validation, and test separation with validation F2 threshold selection.
+- Added Joblib model-bundle persistence, combined inference explanations, context, and data-sufficiency status.
+- Added held-out metrics and coverage-stratified comparisons using labels only after unsupervised fitting.
+
+Anomaly indices are rankings, not calibrated fraud probabilities. Reported metrics apply only to the configured synthetic experiment.
+
+## Phase 6 — player relationship and network intelligence (completed)
+
+- Added NetworkX source-account graphs with typed, weighted relationship evidence.
+- Added shared device, shared payment instrument, repeated one-hour activity overlap, and confirmed ownership relationships.
+- Preserved probable and conflicting identities as separate account nodes.
+- Added component, degree, weighted-degree, identifier-count, cluster-size, and relationship-strength metrics.
+- Added conservative multi-evidence unusual-cluster screening and investigator explanations that explicitly avoid fraud determinations.
+- Added deterministic Plotly-ready node and edge coordinates.
+- Rejected final model scores, alerts, and scenario labels as graph inputs to prevent circular scoring.
+
+The initial six-hour correlation window was rejected during validation because it produced a large chance-overlap component. The default is one hour with at least three repeated overlaps.
+
+## Phase 7 — explainable risk scoring and investigation prioritization (completed)
+
+- Added independent, configurable 0–100 AML/fraud and safer-gambling review indices.
+- Added normalized weighted contribution ledgers with exact point contributions and explicit unavailable-signal status.
+- Added AML transaction anomaly, limited-play fund movement, network, observed-location change, behavioral change, and cross-channel inconsistency signals.
+- Added safer-gambling deposit escalation, observed-loss increase, session-frequency, gambling-intensity, and own/peer-history change signals.
+- Kept data coverage and identity confidence outside both risk calculations.
+- Added source transaction IDs and review-capacity selection while ranking on the stronger independent risk category.
+- Rejected scenario labels and protected profile attributes at the scoring boundary.
+- Kept confirmed ownership edges separate from investigative network strength so ownership alone cannot raise AML risk.
+
+These scores prioritize synthetic cases for human review. They are not calibrated probabilities and do not authorize automated adverse action.
+
+## Phase 8 — explainable investigator copilot (completed)
+
+- Added deterministic, template-based cases without an LLM or external service.
+- Added grounded explanations covering the flag reason, observed historical changes, evidence channels, and cited transactions.
+- Separated evidence for concern from observed mitigation and explicitly labelled unverified alternative hypotheses.
+- Added missing-signal, data-coverage, identity-confidence, and unresolved-transaction disclosures.
+- Added human-review next steps with explicit safeguards against automated freezes, restrictions, or player contact.
+- Added session-local New, Under Review, Escalated, and Closed states; investigator notes; Confirm/Dismiss controls; and timestamped audit history.
+- Added narrative-grounding and workflow unit tests, including rejection of synthetic scenario labels.
+
+This is a local prototype workflow. Its statuses and dispositions do not perform operational actions.
+
+## Phase 9 — professional Streamlit investigator dashboard (completed)
+
+- Replaced the legacy four-tab demonstration with five focused workspaces: Overview, Investigation Queue, Player 360, Network Intelligence, and Validation & Fairness.
+- Added a dark navy financial-intelligence visual system, responsive metrics, risk charts, ranked tables, search, and operational filters.
+- Connected the interface to the Phase 3–8 pipeline, including separate risk ledgers, cited evidence, local case workflow, and complete graph metrics.
+- Added interactive account-network visualization with evidence-ranked layout capping; capping affects only rendered nodes, never graph analysis or scoring.
+- Added computed Recall@K, Precision@K, false-positive/negative counts, per-scenario and per-channel performance, and age/region audit views.
+- Preserved the visibility stress benchmark inside validation and kept held labels outside operational scoring.
+- Added cached causal feature snapshots for large local populations and tests that future transactions cannot alter fixed earlier snapshots.
+- Added navigation and page-rendering regression tests for all five workspaces.
+
+All figures are computed from the current fictional run. No performance result is hard-coded.
+
+## Phase 10 — defensive Red vs Blue arena (completed)
+
+- Added four abstract behavioral-adaptation levels and four channel/identity visibility conditions.
+- Compared simple rules, Blue V1, and Blue V2 on separate development and held-out populations with identical budgets.
+- Added scenario/coverage recall, false-positive/negative, workload, and model-failure views.
+- Added the sixth Streamlit workspace and deterministic experiment caching.
+
+## Phase 11 — model validation and fairness auditing (completed)
+
+- Added separate AML/fraud and safer-gambling threshold and fixed-budget metrics.
+- Added comparable baseline, single-channel, cross-channel, and cross-channel-plus-network score paths.
+- Added scenario/channel recall and sensitivity for visibility loss, identity uncertainty, cold start, benign high spending, and geographic change.
+- Added age/region flag, false-positive, false-negative, recall, disparity-ratio, and small-sample reporting.
+- Preserved protected attributes as evaluation-only fields and documented that equal flag rates do not establish fairness.
+
+## Phase 12 — final integration and presentation (completed)
+
+- Repaired the dashboard preparation/cache boundary and expanded page regression coverage.
+- Reviewed label, identity, missing-data, scoring, explanation, and network trust boundaries.
+- Added architecture, model card, computed evaluation report, five-minute demo, and limitations documentation.
+- Consolidated setup, verification, architecture, scope, and handoff guidance in the README.
 
 ## Next recommended increment
 
-Build the experiment harness first: introduce explicit development/test seeds, a time-aware evaluation split, scenario-level recall, and a transparent scikit-learn baseline. Keep the existing rules as the benchmark and do not change UI claims until held-out results have actually been computed.
+Run accessibility and security reviews, calibrate thresholds on representative authorized development data, add uncertainty intervals across multiple temporal seeds, and design durable role-based case management. Preserve human decision authority and do not add automatic interventions.

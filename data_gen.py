@@ -20,6 +20,9 @@ from configuration import DEFAULT_DATA_CONFIG
 CHANNELS = ('online_casino', 'sportsbook', 'land_casino')
 REGIONS = ('GTA', 'Ottawa', 'North', 'Southwest', 'East')
 SCENARIOS = (
+    'structuring',
+    'income_mismatch',
+    'mule_ring',
     'sudden_spending_escalation',
     'increasing_losses_and_deposits',
     'unusual_geographic_activity',
@@ -30,6 +33,9 @@ SCENARIOS = (
     'legitimate_high_spender',
 )
 RISK_CATEGORY = {
+    'structuring': 'aml_fraud',
+    'income_mismatch': 'aml_fraud',
+    'mule_ring': 'aml_fraud',
     'sudden_spending_escalation': 'safer_gambling',
     'increasing_losses_and_deposits': 'safer_gambling',
     'unusual_geographic_activity': 'aml_fraud',
@@ -123,18 +129,44 @@ def _scenario_table(
     fraction: float,
 ) -> pd.DataFrame:
     count = int(round(len(players) * fraction))
-    chosen = rng.permutation(players.player_id.to_numpy())[:count]
+    strata = {
+        key: list(rng.permutation(group.player_id.to_numpy()))
+        for key, group in players.groupby(['age_band', 'region'], sort=True)
+    }
+    chosen = []
+    while len(chosen) < count and any(strata.values()):
+        for key in sorted(strata):
+            if strata[key] and len(chosen) < count:
+                chosen.append(strata[key].pop())
+    mule_count = min(count, max(3, (count // 10 // 3) * 3)) if count >= 3 else 0
+    malicious_scenarios = tuple(s for s in SCENARIOS if s != 'legitimate_high_spender')
     rows = []
     for i, player_id in enumerate(chosen):
-        scenario = SCENARIOS[i % len(SCENARIOS)]
-        scenario_start = start + pd.to_timedelta(int(rng.integers(105, 151)), unit='D')
+        scenario = (
+            'mule_ring' if i < mule_count
+            else malicious_scenarios[(i - mule_count) % len(malicious_scenarios)]
+        )
+        scenario_start = start + pd.to_timedelta(int(rng.integers(140, 166)), unit='D')
         rows.append({
             'player_id': player_id,
             'scenario_type': scenario,
             'start_time': scenario_start,
             'end_time': end,
             'target_risk_category': RISK_CATEGORY[scenario],
-            'ground_truth_label': scenario != 'legitimate_high_spender',
+            'ground_truth_label': True,
+        })
+    selected = set(chosen)
+    controls = players[~players.player_id.isin(selected)]
+    control_count = min(len(controls), max(1, int(round(len(players) * .005))))
+    for player_id in rng.permutation(controls.player_id.to_numpy())[:control_count]:
+        scenario_start = start + pd.to_timedelta(int(rng.integers(105, 151)), unit='D')
+        rows.append({
+            'player_id': player_id,
+            'scenario_type': 'legitimate_high_spender',
+            'start_time': scenario_start,
+            'end_time': end,
+            'target_risk_category': 'false_positive_control',
+            'ground_truth_label': False,
         })
     return pd.DataFrame(rows, columns=LABEL_COLUMNS).sort_values('player_id').reset_index(drop=True)
 
@@ -182,10 +214,16 @@ def _scenario_context(scenario: str | None, timestamp: pd.Timestamp, scenario_st
     if not active or scenario == 'legitimate_high_spender':
         return 1.0, 0.0
     progress = float(np.clip((timestamp - scenario_start).days / 45, 0, 1))
+    if scenario == 'structuring':
+        return 6.0, progress
+    if scenario == 'income_mismatch':
+        return 10.0, progress
+    if scenario == 'mule_ring':
+        return 4.5, progress
     if scenario == 'sudden_spending_escalation':
-        return 4.2, progress
+        return 6.0, progress
     if scenario == 'increasing_losses_and_deposits':
-        return 1.5 + 2.5 * progress, progress
+        return 2.0 + 5.0 * progress, progress
     if scenario in ('distributed_cross_channel_activity', 'abrupt_behavioral_change'):
         return 2.7, progress
     if scenario == 'rapid_funds_limited_play':
@@ -216,15 +254,19 @@ def _online_events(rng, players, budgets, counts, start, end, scenarios):
         balance = 0.0
         high = 3.8 if scenario == 'legitimate_high_spender' else 1.0
         base = budgets[idx] * high / 5
-        for timestamp in times:
+        for event_index, timestamp in enumerate(times):
             factor, progress = _scenario_context(scenario, timestamp, scenario_start)
             active = scenario_start is not None and timestamp >= scenario_start
             probs = np.array([.25, .53, .14, .08])  # deposit, wager, payout, withdrawal
-            if active and scenario == 'rapid_funds_limited_play':
+            if active and scenario in ('rapid_funds_limited_play', 'structuring', 'income_mismatch', 'mule_ring'):
                 probs = np.array([.43, .10, .04, .43])
             elif active and scenario == 'increasing_losses_and_deposits':
                 probs = np.array([.37, .50, .08, .05])
             event_type = str(rng.choice(['deposit', 'wager', 'payout', 'withdrawal'], p=probs))
+            if active and scenario in ('structuring', 'income_mismatch', 'mule_ring'):
+                event_type = ('deposit', 'deposit', 'withdrawal')[event_index % 3]
+            elif active and scenario in ('sudden_spending_escalation', 'increasing_losses_and_deposits'):
+                event_type = ('deposit', 'wager', 'wager')[event_index % 3]
             before = balance
             amount = _money(base * factor * rng.lognormal(-.15, .55))
             if event_type in ('wager', 'withdrawal') and balance < 1:
@@ -245,7 +287,7 @@ def _online_events(rng, players, budgets, counts, start, end, scenarios):
                 balance -= amount
             device = f'DEV-{player.player_id}-{int(rng.integers(1, 3))}'
             instrument = f'PAY-{player.player_id}'
-            if active and scenario == 'coordinated_account_relationships':
+            if active and scenario in ('coordinated_account_relationships', 'mule_ring'):
                 device, instrument = f'SHARED-DEV-{group:03d}', f'SHARED-PAY-{group:03d}'
             if active and scenario == 'abrupt_behavioral_change':
                 device = f'NEW-DEV-{player.player_id}'
@@ -279,15 +321,19 @@ def _sports_events(rng, players, budgets, counts, start, end, scenarios):
         balance, open_bets = 0.0, []
         high = 3.8 if scenario == 'legitimate_high_spender' else 1.0
         base = budgets[idx] * high / 6
-        for timestamp in times:
+        for event_index, timestamp in enumerate(times):
             factor, progress = _scenario_context(scenario, timestamp, scenario_start)
             active = scenario_start is not None and timestamp >= scenario_start
             probs = np.array([.25, .43, .24, .08])
-            if active and scenario == 'rapid_funds_limited_play':
+            if active and scenario in ('rapid_funds_limited_play', 'structuring', 'income_mismatch', 'mule_ring'):
                 probs = np.array([.44, .09, .05, .42])
             elif active and scenario == 'increasing_losses_and_deposits':
                 probs = np.array([.37, .46, .13, .04])
             event_type = str(rng.choice(['deposit', 'wager', 'settlement', 'withdrawal'], p=probs))
+            if active and scenario in ('structuring', 'income_mismatch', 'mule_ring'):
+                event_type = ('deposit', 'deposit', 'withdrawal')[event_index % 3]
+            elif active and scenario in ('sudden_spending_escalation', 'increasing_losses_and_deposits'):
+                event_type = ('deposit', 'wager', 'wager')[event_index % 3]
             if event_type == 'settlement' and not open_bets:
                 event_type = 'wager'
             if event_type in ('wager', 'withdrawal') and balance < 1:
@@ -315,7 +361,7 @@ def _sports_events(rng, players, budgets, counts, start, end, scenarios):
                 withdrawal = _money(min(balance, max(1, balance * rng.uniform(.20, .82))))
                 balance -= withdrawal
             instrument = f'SB-PAY-{player.player_id}'
-            if active and scenario == 'coordinated_account_relationships':
+            if active and scenario in ('coordinated_account_relationships', 'mule_ring'):
                 instrument = f'SHARED-PAY-{group:03d}'
             rows.append({
                 'event_id': f'SB{len(rows) + 1:09d}', 'channel': 'sportsbook',
@@ -412,21 +458,28 @@ def generate_dataset(
     end = start + pd.to_timedelta(history_days, unit='D') - pd.to_timedelta(1, unit='s')
     players, budgets, activity = _profiles(rng, n_players, start)
     labels = _scenario_table(rng, players, start, end, scenario_fraction)
+    malicious_ids = set(labels.loc[
+        labels.scenario_type.ne('legitimate_high_spender'), 'player_id'
+    ])
+    # Ensure injected cases have enough post-baseline observations to be
+    # detectable without exposing their labels to operational components.
+    event_activity = activity * np.where(players.player_id.isin(malicious_ids), 6.0, 1.0)
     label_lookup = {}
-    coordinated_count = 0
+    relationship_counts = {'coordinated_account_relationships': 0, 'mule_ring': 0}
     for row in labels.itertuples(index=False):
         group = None
-        if row.scenario_type == 'coordinated_account_relationships':
-            group = coordinated_count // 4
-            coordinated_count += 1
+        if row.scenario_type in relationship_counts:
+            group_size = 3 if row.scenario_type == 'mule_ring' else 4
+            group = 10_000 * (row.scenario_type == 'mule_ring') + relationship_counts[row.scenario_type] // group_size
+            relationship_counts[row.scenario_type] += 1
         label_lookup[row.player_id] = (row.scenario_type, row.start_time, group)
 
     casino_target = int(round(target_events * .46))
     sports_target = int(round(target_events * .34))
     land_target = target_events - casino_target - sports_target
-    casino_counts = _channel_counts(rng, players, activity, casino_target, 'online_casino')
-    sports_counts = _channel_counts(rng, players, activity, sports_target, 'sportsbook')
-    land_counts = _channel_counts(rng, players, activity, land_target, 'land_casino')
+    casino_counts = _channel_counts(rng, players, event_activity, casino_target, 'online_casino')
+    sports_counts = _channel_counts(rng, players, event_activity, sports_target, 'sportsbook')
+    land_counts = _channel_counts(rng, players, event_activity, land_target, 'land_casino')
 
     return SyntheticGamingData(
         players=players,
